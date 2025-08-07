@@ -33,4 +33,7 @@ python3 mkdtboimg.py create dtbo.img \
   	${OUT_DIR}/arch/arm64/boot/dts/samsung/x1q/kona-sec-x1q-kor-overlay-r13.dtbo --custom0=0x00 --custom1=0x00 --id=0x0 --rev=0x0 \
   	${OUT_DIR}/arch/arm64/boot/dts/samsung/x1q/kona-sec-x1q-kor-overlay-r14.dtbo --custom0=0x00 --custom1=0x00 --id=0x0 --rev=0x0
 
-cp "$(pwd)/dtbo.img" "$(pwd)/gorhanhee/dtbo.img"
+mv "$(pwd)/dtbo.img" "$(pwd)/gorhanhee/dtbo.img"
+
+cd gorhanhee
+tar -cvf x1q_SuSFS.tar boot.img dtbo.img
