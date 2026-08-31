@@ -22,7 +22,7 @@ on:
 jobs:
   build-kernel:
     name: Compile SM8250 c2q Kernel
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Free Disk Space & Install Build Dependencies
