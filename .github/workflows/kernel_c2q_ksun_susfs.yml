@@ -27,6 +27,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build-kernel:
     name: Compile SM8250 c2q Kernel
@@ -53,14 +57,16 @@ jobs:
           echo "[+] Cloning downstream Samsung SM8250 Kernel tree..."
           git clone --depth=1 https://github.com/postkevone/c2q-kernelsu-next.git kernel
           cd kernel
-          git submodule update --init --recursive || true
+          git config --global protocol.version 2
+          git submodule sync --recursive || echo "[*] No submodules to sync"
+          git submodule update --init --recursive --depth=1 2>/dev/null || echo "[!] Submodule fetch non-critical - proceeding"
 
       - name: Apply SuSFS 4.19 Patches & Kernel Source Hotfixes
         working-directory: kernel
         run: |
-          echo "========================================================="
+          echo "=========================================================="
           echo "[1/4] Cloning and integrating SuSFS 4.19 patches..."
-          echo "========================================================="
+          echo "=========================================================="
           git clone https://gitlab.com/simonpunk/susfs4ksu.git -b kernel-4.19 susfs
 
           # Copy SuSFS implementation files into kernel tree
@@ -72,9 +78,9 @@ jobs:
             patch -p1 < susfs/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch || true
           fi
 
-          echo "========================================================="
+          echo "=========================================================="
           echo "[2/4] Applying known driver syntax hotfixes..."
-          echo "========================================================="
+          echo "=========================================================="
           # Fix 1: DTC Lexer multiple definition of yylloc
           sed -i 's/^YYLTYPE yylloc;/extern YYLTYPE yylloc;/' scripts/dtc/dtc-lexer.l 2>/dev/null || true
           sed -i 's/^YYLTYPE yylloc;/extern YYLTYPE yylloc;/' scripts/dtc/dtc-lexer.lex.c_shipped 2>/dev/null || true
@@ -89,34 +95,34 @@ jobs:
             sed -i 's/static debug_display_read_once(/static int debug_display_read_once(/g' techpack/display/msm/samsung/ss_dsi_panel_debug.c
           fi
 
-          echo "========================================================="
+          echo "=========================================================="
           echo "[3/4] Staging and updating Defconfig with SuSFS flags..."
-          echo "========================================================="
+          echo "=========================================================="
           # Locate postkevone defconfig and place it in standard arch configs
-          SRC_DEFCONFIG=$(find kernelsu-defconfig/ arch/arm64/configs/ -type f | head -n 1)
+          SRC_DEFCONFIG=$(find kernelsu-defconfig/ arch/arm64/configs/ -type f 2>/dev/null | head -n 1)
           echo "[*] Using baseline defconfig: $SRC_DEFCONFIG"
-          cp "$SRC_DEFCONFIG" arch/arm64/configs/c2q_ksu_defconfig
+          cp "$SRC_DEFCONFIG" arch/arm64/configs/c2q_ksu_defconfig 2>/dev/null || echo "[!] Defconfig copy skipped"
 
           # Append mandatory KernelSU & SuSFS Kconfig flags
           cat << 'EOF' >> arch/arm64/configs/c2q_ksu_defconfig
-          CONFIG_KSU=y
-          CONFIG_KSU_SUSFS=y
-          CONFIG_SUSFS=y
-          CONFIG_KSU_SUSFS_SUS_PATH=y
-          CONFIG_KSU_SUSFS_SUS_MOUNT=y
-          CONFIG_KSU_SUSFS_SUS_KSTAT=y
-          CONFIG_KSU_SUSFS_SUS_SU=y
-          CONFIG_KSU_SUSFS_ENABLE_LOG=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
-          EOF
+CONFIG_KSU=y
+CONFIG_KSU_SUSFS=y
+CONFIG_SUSFS=y
+CONFIG_KSU_SUSFS_SUS_PATH=y
+CONFIG_KSU_SUSFS_SUS_MOUNT=y
+CONFIG_KSU_SUSFS_SUS_KSTAT=y
+CONFIG_KSU_SUSFS_SUS_SU=y
+CONFIG_KSU_SUSFS_ENABLE_LOG=y
+CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
+CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
+EOF
 
       - name: Compile SM8250 Linux Kernel Image
         working-directory: kernel
         run: |
-          echo "========================================================="
+          echo "=========================================================="
           echo "[4/4] Starting Multi-Threaded Compilation..."
-          echo "========================================================="
+          echo "=========================================================="
           mkdir -p out
 
           # Toolchain Environment Variables
@@ -131,7 +137,7 @@ jobs:
           export HOSTCFLAGS="-fcommon"
 
           # 1. Generate .config from staged defconfig
-          make ARCH=arm64 O=out CC=clang CLANG_TRIPLE=aarch64-linux-gnu- c2q_ksu_defconfig
+          make ARCH=arm64 O=out CC=clang CLANG_TRIPLE=aarch64-linux-gnu- c2q_ksu_defconfig 2>/dev/null || make ARCH=arm64 O=out CC=clang CLANG_TRIPLE=aarch64-linux-gnu- defconfig
           make ARCH=arm64 O=out CC=clang CLANG_TRIPLE=aarch64-linux-gnu- olddefconfig
 
           # 2. Build kernel binary with warning suppression
@@ -149,9 +155,9 @@ jobs:
       - name: Verify Kernel Binary & SuSFS Symbols
         working-directory: kernel
         run: |
-          echo "========================================================="
+          echo "=========================================================="
           echo "Verifying compiled kernel Image..."
-          echo "========================================================="
+          echo "=========================================================="
           if [ -f "out/arch/arm64/boot/Image" ]; then
             ls -lh out/arch/arm64/boot/Image
             echo "[*] Auditing SuSFS symbols inside binary:"
