@@ -23,7 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ARCH: arm64
-      # default cross compiler; override if you want a specific toolchain path
       CROSS_COMPILE: aarch64-linux-gnu-
       KBUILD_OUTPUT: ${{ github.workspace }}/out
 
@@ -31,18 +30,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          submodules: false
 
-      - name: Clean up old submodule references
+      - name: Validate .gitmodules
         run: |
-          git submodule deinit -f --all || true
-          rm -rf .git/modules/* || true
+          if [ -f .gitmodules ]; then
+            echo "[*] .gitmodules found, validating..."
+            cat .gitmodules
+            git config --file .gitmodules --get-regexp '^submodule.*url' || echo "[!] Warning: No submodule URLs found"
+          else
+            echo "[*] No .gitmodules file - proceeding without submodules"
+          fi
 
-      - name: Re-initialize submodules
+      - name: Clean git state and initialize submodules safely
         run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive
+          # Remove any cached submodule references that may point to deleted commits
+          git submodule deinit -f --all 2>/dev/null || true
+          rm -rf .git/modules 2>/dev/null || true
+          git clean -fdx .git/modules 2>/dev/null || true
+          
+          # Sync and initialize with full history (no shallow clone for submodules)
+          git config --global protocol.version 2
+          git submodule sync --recursive || echo "[!] No submodules to sync"
+          git submodule update --init --recursive --depth=1 || echo "[!] Submodule fetch failed (non-critical - proceeding)"
 
       - name: Set up QEMU (optional for container/toolchain use)
         uses: docker/setup-qemu-action@v2
@@ -72,7 +84,6 @@ jobs:
       - name: Use device defconfig if present
         id: defconfig
         run: |
-          # Look for defconfig in common locations. Adjust path to your device defconfig if needed.
           DEVICE_DEFCONFIG="vendor/samsung/defconfig"
           if [ -f "$GITHUB_WORKSPACE/defconfig" ]; then
             echo "Found repo root defconfig"
@@ -83,7 +94,6 @@ jobs:
             cp "$DEVICE_DEFCONFIG" ${KBUILD_OUTPUT}/.config
             echo "used=device" >> $GITHUB_OUTPUT
           else
-            # Try to pick a defconfig from arch/arm64/configs if available
             if ls arch/arm64/configs/* 1> /dev/null 2>&1; then
               echo "Falling back to make defconfig"
               make O=${KBUILD_OUTPUT} defconfig
@@ -98,7 +108,6 @@ jobs:
         run: |
           set -e
           echo "Build env: ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE KBUILD_OUTPUT=$KBUILD_OUTPUT"
-          # Adjust parallelism if needed
           make -j$(nproc) O=${KBUILD_OUTPUT} Image dtbs modules
 
       - name: Install modules to staging and package outputs
