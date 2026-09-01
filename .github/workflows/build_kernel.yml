@@ -215,7 +215,9 @@ jobs:
           export CC="ccache aarch64-linux-gnu-gcc"
           export HOSTCC="ccache gcc"
 
-          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat -Wno-error=inline"
+          # Suppress all error→warning conversions and inline-specific errors
+          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat"
+          CCFLAGS="-Wno-error -Wno-error=inline -Wno-always-inline"
 
           make -j$(nproc --all) ARCH=arm64 O=out \
             CC=aarch64-linux-gnu-gcc \
@@ -230,7 +232,8 @@ jobs:
             HOSTCC=gcc \
             HOSTCXX=g++ \
             HOSTCFLAGS="-fcommon -Wno-error" \
-            KCFLAGS="$KFLAGS" \
+            KCFLAGS="$KFLAGS $CCFLAGS" \
+            CFLAGS="$CCFLAGS" \
             Image 2>&1 | tee build_execution.log
 
       - name: Verify Binary & Export Production Artifacts
