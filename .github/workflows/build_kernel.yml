@@ -170,9 +170,10 @@ jobs:
           fi
 
           # Fix fs/notify/fdinfo.c undeclared 'mask' variable (x1q defconfig enables buggy code path)
+          # In inotify_fdinfo function, line 143: should use 'mark' not 'mask'
           if [ -f "fs/notify/fdinfo.c" ]; then
-            echo "[*] Applying fdinfo.c 'mask' variable fix..."
-            sed -i 's/\.mask = mask/\.mask = mark/g' fs/notify/fdinfo.c || echo "  (fdinfo.c fix skipped or already fixed)"
+            echo "[*] Applying fdinfo.c inotify_fdinfo 'mask' → 'mark' fix..."
+            sed -i '143s/mask/mark/' fs/notify/fdinfo.c && echo "  [+] Fixed line 143" || echo "  (fdinfo.c fix skipped)"
           fi
 
           echo "[+] SuSFS integration and vendor fixes completed"
