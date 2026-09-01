@@ -200,7 +200,7 @@ jobs:
           export HOSTCXX=clang++
           export HOSTCFLAGS="-fcommon"
 
-          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat"
+          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat -Wno-error=inline"
 
           make -j$(nproc --all) ARCH=arm64 O=out \
             CC=aarch64-linux-gnu-gcc \
@@ -214,7 +214,7 @@ jobs:
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             HOSTCC=gcc \
             HOSTCXX=g++ \
-            HOSTCFLAGS="-fcommon" \
+            HOSTCFLAGS="-fcommon -Wno-error=inline" \
             KCFLAGS="$KFLAGS" \
             Image 2>&1 | tee build_execution.log
 
