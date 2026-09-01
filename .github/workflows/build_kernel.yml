@@ -150,17 +150,17 @@ jobs:
           
           # Step 3: Create KernelSU/SuSFS configuration fragment
           cat > /tmp/susfs_ksu.config << 'FRAGMENT_EOF'
-CONFIG_KSU=y
-CONFIG_KSU_SUSFS=y
-CONFIG_SUSFS=y
-CONFIG_KSU_SUSFS_SUS_PATH=y
-CONFIG_KSU_SUSFS_SUS_MOUNT=y
-CONFIG_KSU_SUSFS_SUS_KSTAT=y
-CONFIG_KSU_SUSFS_SUS_SU=y
-CONFIG_KSU_SUSFS_ENABLE_LOG=y
-CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
-CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
-FRAGMENT_EOF
+          CONFIG_KSU=y
+          CONFIG_KSU_SUSFS=y
+          CONFIG_SUSFS=y
+          CONFIG_KSU_SUSFS_SUS_PATH=y
+          CONFIG_KSU_SUSFS_SUS_MOUNT=y
+          CONFIG_KSU_SUSFS_SUS_KSTAT=y
+          CONFIG_KSU_SUSFS_SUS_SU=y
+          CONFIG_KSU_SUSFS_ENABLE_LOG=y
+          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
+          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
+          FRAGMENT_EOF
           
           echo "[✓] Created KernelSU/SuSFS fragment (11 config options)"
           
