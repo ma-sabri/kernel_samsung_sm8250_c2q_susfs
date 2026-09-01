@@ -112,22 +112,22 @@ jobs:
           if [ ! -f "drivers/kernelsu/Kconfig" ]; then
             echo "[!] drivers/kernelsu/Kconfig missing, creating minimal stub..."
             mkdir -p drivers/kernelsu
-            cat > drivers/kernelsu/Kconfig << 'KCFG'
-config KSU
-  bool "KernelSU support"
-  default y
-  help
-    Enable KernelSU root engine
+            cat > drivers/kernelsu/Kconfig << 'EOF'
+          config KSU
+            bool "KernelSU support"
+            default y
+            help
+              Enable KernelSU root engine
 
-config KSU_SUSFS
-  bool "KernelSU SuSFS integration"
-  depends on KSU
-  default y
+          config KSU_SUSFS
+            bool "KernelSU SuSFS integration"
+            depends on KSU
+            default y
 
-config SUSFS
-  bool "SuSFS virtual filesystem"
-  default y
-KCFG
+          config SUSFS
+            bool "SuSFS virtual filesystem"
+            default y
+          EOF
             echo "[+] Created Kconfig stub"
           else
             echo "[+] Kconfig already exists"
