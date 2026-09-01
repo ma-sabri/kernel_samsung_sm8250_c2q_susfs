@@ -82,11 +82,17 @@ jobs:
 
       - name: Clone Kernel Source Tree & Setup KernelSU-Next
         run: |
+          set -x
           echo "========================================================="
           echo "[3/8] Cloning xwenx90 SM8250 kernel (proven base)..."
           echo "========================================================="
           git clone --depth=1 --single-branch -b x1q https://github.com/xwenx90/GalaxyS20_Series_KernelSU_Next_Susfs.git kernel
           cd kernel
+          echo "[+] Cloned kernel directory structure:"
+          ls -la | head -20
+          echo "[+] Checking for existing KernelSU:"
+          find . -name "Kconfig" -path "*/kernelsu/*" 2>/dev/null | head -5
+
           export CCACHE_DIR=~/.ccache
           ccache --max-size=2G
 
@@ -94,9 +100,11 @@ jobs:
           if [ ! -d "drivers/kernelsu" ]; then
             echo "[*] KernelSU driver directory missing, cloning KernelSU-Next..."
             mkdir -p drivers
-            git clone --depth=1 https://github.com/rifsxd/KernelSU-Next.git drivers/kernelsu
+            git clone --depth=1 https://github.com/rifsxd/KernelSU-Next.git drivers/kernelsu 2>&1 | tail -5
+            ls -la drivers/kernelsu/ | head -10
           else
             echo "[+] KernelSU driver already present"
+            ls -la drivers/kernelsu/ | head -10
           fi
 
           # Verify Kconfig exists
@@ -119,7 +127,11 @@ config SUSFS
   bool "SuSFS virtual filesystem"
   default y
 KCFG
+            echo "[+] Created Kconfig stub"
+          else
+            echo "[+] Kconfig already exists"
           fi
+          set +x
 
       - name: Apply SuSFS 4.19 Hooks & Driver Syntax Fixes
         working-directory: kernel
@@ -233,6 +245,13 @@ KCFG
           export CC="ccache aarch64-linux-gnu-gcc"
           export HOSTCC="ccache gcc"
 
+          echo "[*] Verifying cross-compiler..."
+          which aarch64-linux-gnu-gcc && aarch64-linux-gnu-gcc --version | head -2
+          echo "[*] Checking defconfig..."
+          ls -lh arch/arm64/configs/target_defconfig 2>/dev/null || echo "  (defconfig not found at expected location)"
+          ls -lh out/.config 2>/dev/null || echo "  (config not found in out/)"
+
+          echo "[*] Starting compilation with $(nproc --all) threads..."
           make -j$(nproc --all) ARCH=arm64 O=out \
             CC=aarch64-linux-gnu-gcc \
             LD=aarch64-linux-gnu-ld.bfd \
@@ -247,6 +266,8 @@ KCFG
             HOSTCXX=g++ \
             HOSTCFLAGS="-fcommon" \
             Image 2>&1 | tee build_execution.log
+
+          echo "[*] Compilation complete. Exit code: $?"
 
       - name: Verify Binary & Export Production Artifacts
         working-directory: kernel
