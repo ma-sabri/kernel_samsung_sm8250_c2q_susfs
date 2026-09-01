@@ -1,35 +1,25 @@
 #!/bin/bash
 set -e
 
-echo "=== 1. Checking Directory Environment ==="
-pwd
-ls -la
-
-echo "=== 2. Wiping Placeholder Folders ==="
+echo "=== Wiping Link Obstacles ==="
 rm -rf KernelSU-Next
 rm -f .gitmodules
 
-echo "=== 3. Streaming Raw HTTP Source Archive ==="
+echo "=== Streaming Raw HTTP Source Archive ==="
 mkdir -p KernelSU-Next
 curl -LSs https://github.com | tar -xz -C KernelSU-Next --strip-components=1
 
-echo "=== 4. Setting Compiling Architecture Env ==="
+echo "=== Setting Cross-Compiler Target Env ==="
 export ARCH=arm64
 export SUBARCH=arm64
 
-echo "=== 5. Patching Flat Defconfig Alias ==="
-# Verify the source file physically exists before attempting a copy
-if [ -f "arch/arm64/configs/vendor/samsung/defconfig" ]; then
-    cp arch/arm64/configs/vendor/samsung/defconfig arch/arm64/configs/samsung_ci_defconfig
-    echo "Successfully mapped samsung_ci_defconfig"
-else
-    echo "ERROR: arch/arm64/configs/vendor/samsung/defconfig not found!"
-    exit 1
-fi
+echo "=== Patching Flat Defconfig Alias ==="
+# Hard-pointing directly to your verified z3q S20 Ultra layout config file path
+cp arch/arm64/configs/vendor/z3q_kor_singlex_defconfig arch/arm64/configs/samsung_ci_defconfig
 
-echo "=== 6. Generating Configuration Objects ==="
+echo "=== Generating Configuration Objects ==="
 mkdir -p out
 make O=out ARCH=arm64 samsung_ci_defconfig
 
-echo "=== 7. Commencing Processing Pipeline ==="
+echo "=== Commencing Processing Pipeline ==="
 make O=out ARCH=arm64 -j$(nproc --all)
