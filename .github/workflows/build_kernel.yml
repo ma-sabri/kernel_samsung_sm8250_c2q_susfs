@@ -202,14 +202,18 @@ jobs:
 
           KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat -fno-builtin"
 
+          # Ensure cross-compiler tools are used instead of host tools
+          export PATH="/usr/aarch64-linux-gnu/bin:$PATH"
+
           make -j$(nproc --all) ARCH=arm64 O=out \
             CC=clang \
-            LD=ld.lld \
-            AR=llvm-ar \
-            NM=llvm-nm \
-            OBJCOPY=llvm-objcopy \
-            OBJDUMP=llvm-objdump \
-            STRIP=llvm-strip \
+            AS=aarch64-linux-gnu-as \
+            LD=aarch64-linux-gnu-ld.bfd \
+            AR=aarch64-linux-gnu-ar \
+            NM=aarch64-linux-gnu-nm \
+            OBJCOPY=aarch64-linux-gnu-objcopy \
+            OBJDUMP=aarch64-linux-gnu-objdump \
+            STRIP=aarch64-linux-gnu-strip \
             CLANG_TRIPLE=aarch64-linux-gnu- \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
