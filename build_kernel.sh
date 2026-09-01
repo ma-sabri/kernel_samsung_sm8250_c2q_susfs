@@ -1,26 +1,29 @@
 #!/bin/bash
 set -e
 
-echo "=== Ensuring Root Directory Layout ==="
-# Force remove directory and any leftover hidden git link artifacts
+echo "=== Overriding Submodule Directories ==="
+# Break any existing folder locks before trying to clone
 rm -rf KernelSU-Next
 rm -f .gitmodules
 
-echo "=== Manually Pulling Fresh KernelSU-Next Source ==="
-# Bypasses submodule tracking entirely by doing a clean, raw directory clone
+echo "=== Pulling KernelSU-Next From Raw Remote Tree ==="
+# Clone it fresh into the root directory
 git clone --depth=1 https://github.com KernelSU-Next
 
-echo "=== Configuring Environment Variables ==="
+# CRITICAL STEP: Strip the internal git tracking directory out of the cloned folder.
+# This prevents GitHub's parent tracking from getting confused and dropping an exit 128 error.
+rm -rf KernelSU-Next/.git
+
+echo "=== Initializing Compiling Profiles ==="
 export ARCH=arm64
 export SUBARCH=arm64
 
 echo "=== Patching Defconfig Loop ==="
-# Bypasses standard make fallback errors by copying to a flat alias filename
 cp arch/arm64/configs/vendor/samsung/defconfig arch/arm64/configs/samsung_ci_defconfig
 
 echo "=== Generating Configs ==="
 mkdir -p out
 make O=out ARCH=arm64 samsung_ci_defconfig
 
-echo "=== Beginning Compilation Pipeline ==="
+echo "=== Starting Architecture Compilation ==="
 make O=out ARCH=arm64 -j$(nproc --all)
