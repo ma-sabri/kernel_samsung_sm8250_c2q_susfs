@@ -5,17 +5,6 @@
 # Target SoC: Qualcomm Snapdragon 865+ (SM8250 / Kona)
 # Kernel Base: Linux 4.19.x (android-4.19-stable downstream)
 # Root Engine: KernelSU-Next + SuSFS 4.19 (SimonPunk v1.5.x VFS Hooks)
-#
-# FIRMWARE & ARCHITECTURE VERIFICATION:
-# 1. Baseband/PDA: N9860ZSSDHYD1 confirmed as Android 13 One UI 5.1 (SM8250).
-# 2. Compatibility: Kernel Image is 100% binary-compatible with N9860ZSSDHYD1 stock
-#    boot.img RAMDisk via standard magiskboot repackaging.
-# 3. Compiler Toolchain: Pinned Google AOSP Clang r383902 (LLVM 11.0.2).
-#    Bypasses modern Clang 18+ strict C99 prototype and implicit type errors.
-# 4. Host Build Flag: Injects HOSTCFLAGS='-fcommon' to resolve DTC parser 'yylloc' collision.
-# 5. Non-Interactive Guard: Piped yes "" and timeout 120s prevent Kbuild prompt hangs.
-# 6. Freestanding Kernel Symbols: -fno-builtin-stpcpy -fno-builtin-strcat prevent libc calls.
-# 7. Linker Engine: Uses LLVM LLD (ld.lld) to prevent Knox RTIC (.bss.rtic) reloc overflows.
 # ==============================================================================
 
 name: Production Build SM8250 KernelSU-Next SuSFS
@@ -61,7 +50,8 @@ jobs:
             git cpio tar xz-utils bc bison flex libssl-dev make \
             gcc g++ gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
             gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi libelf-dev \
-            libncurses5-dev zip libfl-dev lld llvm liblz4-tool
+            libncurses5-dev zip libfl-dev lld llvm liblz4-tool \
+            python3 python3-setuptools python3-dev
 
       - name: Fetch Google AOSP Clang Toolchain (r383902 / Clang 11.0.2)
         run: |
@@ -119,11 +109,23 @@ jobs:
           echo "[5/7] Configuring kernel options without interactive loops..."
           echo "========================================================="
           mkdir -p out arch/arm64/configs
-          SRC_DEFCONFIG=$(find kernelsu-defconfig/ arch/arm64/configs/ -type f | head -n 1)
-          echo "[*] Baseline defconfig located at: $SRC_DEFCONFIG"
-          cp "$SRC_DEFCONFIG" arch/arm64/configs/c2q_ksu_defconfig
 
-          cat << 'EOF' >> arch/arm64/configs/c2q_ksu_defconfig
+          # Find real defconfig: Check kernelsu-defconfig first, fallback to kona-perf_defconfig
+          if [ -d "kernelsu-defconfig" ] && [ "$(ls -A kernelsu-defconfig)" ]; then
+            SRC_DEFCONFIG=$(find kernelsu-defconfig/ -type f | head -n 1)
+          elif [ -f "arch/arm64/configs/vendor/kona-perf_defconfig" ]; then
+            SRC_DEFCONFIG="arch/arm64/configs/vendor/kona-perf_defconfig"
+          elif [ -f "arch/arm64/configs/kona-perf_defconfig" ]; then
+            SRC_DEFCONFIG="arch/arm64/configs/kona-perf_defconfig"
+          else
+            SRC_DEFCONFIG=$(find arch/arm64/configs/ -name "*defconfig" | head -n 1)
+          fi
+
+          echo "[*] Selected baseline defconfig: $SRC_DEFCONFIG"
+          cp "$SRC_DEFCONFIG" arch/arm64/configs/c2q_defconfig
+
+          # Append KernelSU-Next and SuSFS configuration symbols directly
+          cat << 'EOF' >> arch/arm64/configs/c2q_defconfig
           CONFIG_KSU=y
           CONFIG_KSU_SUSFS=y
           CONFIG_SUSFS=y
@@ -142,11 +144,11 @@ jobs:
           export LD=ld.lld
           export CLANG_TRIPLE=aarch64-linux-gnu-
 
-          echo "[*] Initializing defconfig..."
-          timeout 120s make ARCH=arm64 O=out CC=clang LD=ld.lld CLANG_TRIPLE=aarch64-linux-gnu- c2q_ksu_defconfig
+          echo "[*] Generating base .config from c2q_defconfig..."
+          make ARCH=arm64 O=out CC=clang LD=ld.lld CLANG_TRIPLE=aarch64-linux-gnu- c2q_defconfig
           
-          echo "[*] Finalizing with olddefconfig..."
-          yes "" | timeout 120s make ARCH=arm64 O=out CC=clang LD=ld.lld CLANG_TRIPLE=aarch64-linux-gnu- olddefconfig
+          echo "[*] Resolving new symbols non-interactively..."
+          yes "" | make ARCH=arm64 O=out CC=clang LD=ld.lld CLANG_TRIPLE=aarch64-linux-gnu- olddefconfig
 
       - name: Execute Multi-Threaded Kernel Compilation
         working-directory: kernel
