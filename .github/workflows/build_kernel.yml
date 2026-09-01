@@ -200,24 +200,20 @@ jobs:
           export HOSTCXX=clang++
           export HOSTCFLAGS="-fcommon"
 
-          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat -fno-builtin -fno-integrated-as"
-
-          # Ensure PATH includes cross-compiler binutils
-          export PATH="$(dirname $(which aarch64-linux-gnu-gcc)):$PATH"
+          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat"
 
           make -j$(nproc --all) ARCH=arm64 O=out \
-            CC="clang -target aarch64-linux-gnu" \
+            CC=aarch64-linux-gnu-gcc \
             LD=aarch64-linux-gnu-ld.bfd \
             AR=aarch64-linux-gnu-ar \
             NM=aarch64-linux-gnu-nm \
             OBJCOPY=aarch64-linux-gnu-objcopy \
             OBJDUMP=aarch64-linux-gnu-objdump \
             STRIP=aarch64-linux-gnu-strip \
-            CLANG_TRIPLE=aarch64-linux-gnu- \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-            HOSTCC=clang \
-            HOSTCXX=clang++ \
+            HOSTCC=gcc \
+            HOSTCXX=g++ \
             HOSTCFLAGS="-fcommon" \
             KCFLAGS="$KFLAGS" \
             Image 2>&1 | tee build_execution.log
