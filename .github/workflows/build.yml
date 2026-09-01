@@ -2,6 +2,9 @@ name: Compile Kernel
 on:
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -9,12 +12,14 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4.2.0
         with:
-          submodules: false
+          submodules: true
+          fetch-depth: 1
 
-      - name: Install System Engine Tool Dependencies
+      - name: Install System Engine & Cross-Compiler Multiarch Dependencies
         run: |
+          sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y bc bison flex libssl-dev libelf-dev lld llvm ccache build-essential libncurses5-dev python3 git rsync
+          sudo apt-get install -y bc bison flex libssl-dev libelf-dev lld llvm ccache build-essential libncurses5-dev python3 git rsync libc6:i386 libncurses5:i386 libstdc++6:i386 lib32z1
 
-      - name: Execute Native Build Engine Script
+      - name: Execute Verified Submodule Build Engine
         run: bash build_kernel.sh

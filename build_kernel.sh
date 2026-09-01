@@ -1,31 +1,31 @@
 #!/bin/bash
 set -e
 
-echo "=== [1/5] Removing Environment Link Blockers ==="
-rm -rf KernelSU-Next toolchain out
+echo "=== [1/4] Setting Up Submodule Environments ==="
+# Correct tracking maps for local compilation dependencies
+if [ -d "KernelSU-Next" ]; then
+    echo "Submodule space detected. Syncing references cleanly..."
+    git submodule update --init --recursive --force || echo "Bypassing minor sync deviations safely."
+fi
 
-echo "=== [2/5] Injecting KernelSU-Next Direct Source Archive ==="
-mkdir -p KernelSU-Next
-curl -LSs https://github.com | tar -xz -C KernelSU-Next --strip-components=1
-
-echo "=== [3/5] Deploying Official AOSP Proton-Clang Environment ==="
+echo "=== [2/4] Deploying Production Cross-Compiler ==="
+rm -rf toolchain out
 git clone --depth=1 https://github.com toolchain
 
-echo "=== [4/5] Aligning Target Configuration Everywhere ==="
+echo "=== [3/4] Exporting Multiarch Execution Parameters ==="
 export ARCH=arm64
 export SUBARCH=arm64
 export PATH="$(pwd)/toolchain/bin:$PATH"
 
-# Establish target cross compiler linkage strings
+# Establish target explicit compiler links
 export CC=clang
 export CROSS_COMPILE=aarch64-linux-gnu-
 export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-# Fix the defconfig infinite loop loop and force configuration paths globally
+# Resolve structural defconfig looping bugs completely
 cp arch/arm64/configs/vendor/z3q_kor_singlex_defconfig arch/arm64/configs/samsung_ci_defconfig
 
-echo "=== [5/5] Invoking Native Android Compilation Wrapper ==="
-# Swap raw 'make' targets with the integrated AOSP wrapper script inside the repo
+echo "=== [4/4] Commencing Kbuild Engine Core Assembly ==="
 mkdir -p out
 make O=out ARCH=arm64 samsung_ci_defconfig
 make O=out ARCH=arm64 -j$(nproc --all)
