@@ -1,15 +1,26 @@
-    steps:
-      name: Checkout and Compile Kernel
-      uses: actions/checkout@v4
-      with:
-        submodules: false
+name: Compile Kernel
+on:
+  workflow_dispatch:
 
-      run: |
-        rm -rf KernelSU-Next
-        git clone --depth=1 https://github.com KernelSU-Next
-        export ARCH=arm64
-        export SUBARCH=arm64
-        cp arch/arm64/configs/vendor/samsung/defconfig arch/arm64/configs/samsung_ci_defconfig
-        mkdir -p out
-        make O=out ARCH=arm64 samsung_ci_defconfig
-        make O=out ARCH=arm64 -j$(nproc --all)
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Setup KernelSU-Next on Root
+        run: |
+          rm -rf KernelSU-Next
+          git clone --depth=1 https://github.com KernelSU-Next
+
+      - name: Configure and Build Kernel
+        run: |
+          export ARCH=arm64
+          export SUBARCH=arm64
+          cp arch/arm64/configs/vendor/samsung/defconfig arch/arm64/configs/samsung_ci_defconfig
+          mkdir -p out
+          make O=out ARCH=arm64 samsung_ci_defconfig
+          make O=out ARCH=arm64 -j$(nproc --all)
