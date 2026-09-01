@@ -1,28 +1,15 @@
-    name: Checkout Kernel Source
-        uses: actions/checkout@v4
-        with:
-          submodules: false # Prevents the Exit 128 submodule crash on GitHub side
+    steps:
+      name: Checkout and Compile Kernel
+      uses: actions/checkout@v4
+      with:
+        submodules: false
 
-    name: Setup KernelSU-Next
-        run: |
-          # 1. Strip the un-synchronized directory layout reference completely
-          rm -rf KernelSU-Next
-          
-          # 2. Inject fresh, official source files right into your root compilation tree
-          git clone --depth=1 https://github.com KernelSU-Next
-
-    name: Configure and Build Kernel
-        run: |
-          export ARCH=arm64
-          export SUBARCH=arm64
-          
-          # 3. Permanent Fix for the recursive loop error:
-          # Move your target layout into the standard flat path before invoking 'make'
-          cp arch/arm64/configs/vendor/samsung/defconfig arch/arm64/configs/samsung_ci_defconfig
-          
-          mkdir -p out
-          # Generate clean configs using the temporary flat name moniker
-          make O=out ARCH=arm64 samsung_ci_defconfig
-          
-          # 4. Start compilation smoothly
-          make O=out ARCH=arm64 -j$(nproc --all)
+      run: |
+        rm -rf KernelSU-Next
+        git clone --depth=1 https://github.com KernelSU-Next
+        export ARCH=arm64
+        export SUBARCH=arm64
+        cp arch/arm64/configs/vendor/samsung/defconfig arch/arm64/configs/samsung_ci_defconfig
+        mkdir -p out
+        make O=out ARCH=arm64 samsung_ci_defconfig
+        make O=out ARCH=arm64 -j$(nproc --all)
