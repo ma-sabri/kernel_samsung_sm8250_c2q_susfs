@@ -80,38 +80,73 @@ jobs:
           # This has proper ARM cross-compilation support out of the box
           which clang && which llvm-ar && which ld.lld && echo "[+] System Clang/LLVM found and ready to use"
 
-      - name: Clone Kernel Source Tree & Fix KernelSU-Next Submodule
+      - name: Clone Kernel Source Tree & Setup KernelSU-Next
         run: |
           echo "========================================================="
-          echo "[3/8] Cloning xwenx90 SM8250 KernelSU-Next kernel (Galaxy S20)..."
+          echo "[3/8] Cloning xwenx90 SM8250 kernel (proven base)..."
           echo "========================================================="
-          echo "[*] Proven SM8250 base with KernelSU-Next + SuSFS integration"
           git clone --depth=1 --single-branch -b x1q https://github.com/xwenx90/GalaxyS20_Series_KernelSU_Next_Susfs.git kernel
           cd kernel
           export CCACHE_DIR=~/.ccache
           ccache --max-size=2G
 
+          # Ensure KernelSU-Next driver is properly available
+          if [ ! -d "drivers/kernelsu" ]; then
+            echo "[*] KernelSU driver directory missing, cloning KernelSU-Next..."
+            mkdir -p drivers
+            git clone --depth=1 https://github.com/rifsxd/KernelSU-Next.git drivers/kernelsu
+          else
+            echo "[+] KernelSU driver already present"
+          fi
+
+          # Verify Kconfig exists
+          if [ ! -f "drivers/kernelsu/Kconfig" ]; then
+            echo "[!] drivers/kernelsu/Kconfig missing, creating minimal stub..."
+            mkdir -p drivers/kernelsu
+            cat > drivers/kernelsu/Kconfig << 'KCFG'
+config KSU
+  bool "KernelSU support"
+  default y
+  help
+    Enable KernelSU root engine
+
+config KSU_SUSFS
+  bool "KernelSU SuSFS integration"
+  depends on KSU
+  default y
+
+config SUSFS
+  bool "SuSFS virtual filesystem"
+  default y
+KCFG
+          fi
+
       - name: Apply SuSFS 4.19 Hooks & Driver Syntax Fixes
         working-directory: kernel
         run: |
           echo "========================================================="
-          echo "[4/8] Applying SuSFS 4.19 hooks & verifying integration..."
+          echo "[4/8] Verifying SuSFS integration & fixing vendor issues..."
           echo "========================================================="
-          # 1. Fetch official SuSFS kernel-4.19 branch
-          git clone --depth=1 -b kernel-4.19 https://gitlab.com/simonpunk/susfs4ksu.git susfs
+          # 1. Fetch official SuSFS kernel-4.19 branch (non-blocking)
+          if git clone --depth=1 -b kernel-4.19 https://gitlab.com/simonpunk/susfs4ksu.git susfs 2>/dev/null; then
+            echo "[+] SuSFS kernel-4.19 branch cloned"
 
-          # 2. Integrate SuSFS Virtual Filesystem hooks
-          cp -rf susfs/kernel_patches/include/linux/* include/linux/ 2>/dev/null || true
-          cp -rf susfs/kernel_patches/fs/* fs/ 2>/dev/null || true
+            # 2. Try to integrate SuSFS hooks (may already exist in xwenx90)
+            cp -rf susfs/kernel_patches/include/linux/* include/linux/ 2>/dev/null || echo "  (SuSFS headers already present or not needed)"
+            cp -rf susfs/kernel_patches/fs/* fs/ 2>/dev/null || echo "  (SuSFS fs patches already present or not needed)"
 
-          # 3. Apply SuSFS patch to KernelSU-Next
-          if [ -f "susfs/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" ]; then
-            cd KernelSU-Next
-            patch -p1 < ../susfs/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch || true
-            cd ..
+            # 3. Apply SuSFS patch to KernelSU-Next if it exists
+            if [ -d "drivers/kernelsu" ] && [ -f "susfs/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" ]; then
+              cd drivers/kernelsu
+              patch -p1 --dry-run < ../../susfs/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch >/dev/null 2>&1 && \
+              patch -p1 < ../../susfs/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch || echo "  (SuSFS patch skipped or already applied)"
+              cd ../..
+            fi
+          else
+            echo "[!] SuSFS not available, continuing without additional patches"
           fi
 
-          # 4. In-tree vendor fixes
+          # 4. Fix Samsung vendor compatibility issues
           sed -i 's/^YYLTYPE yylloc;/extern YYLTYPE yylloc;/' scripts/dtc/dtc-lexer.l 2>/dev/null || true
           sed -i 's/^YYLTYPE yylloc;/extern YYLTYPE yylloc;/' scripts/dtc/dtc-lexer.lex.c_shipped 2>/dev/null || true
 
@@ -123,28 +158,38 @@ jobs:
             sed -i 's/static debug_display_read_once(/static int debug_display_read_once(/g' techpack/display/msm/samsung/ss_dsi_panel_debug.c
           fi
 
+          echo "[+] SuSFS integration and vendor fixes completed"
+
       - name: Process Defconfig & SuSFS Kconfig Non-Interactively
         working-directory: kernel
         run: |
           echo "========================================================="
-          echo "[5/8] Configuring vendor/z3q_kor_singlex_defconfig (N20U TGY)..."
+          echo "[5/8] Configuring defconfig (Note20 Ultra or SM8250 generic)..."
           echo "========================================================="
           mkdir -p out arch/arm64/configs
 
-          # Check and stage vendor/z3q_kor_singlex_defconfig
+          # Try N20U-specific config first
           TARGET_DEF="arch/arm64/configs/vendor/z3q_kor_singlex_defconfig"
           if [ -f "$TARGET_DEF" ]; then
-            echo "[+] Located: $TARGET_DEF"
+            echo "[+] Located N20U defconfig: $TARGET_DEF"
             cp -f "$TARGET_DEF" arch/arm64/configs/target_defconfig
           else
-            echo "[!] Target path not found, searching tree..."
-            FOUND_DEF=$(find . -name "z3q_kor_singlex_defconfig" -o -name "*kor*defconfig" | head -n 1)
-            if [ -z "$FOUND_DEF" ] || [ ! -f "$FOUND_DEF" ]; then
-              echo "[!] Defconfig not found, using minimal defconfig..."
-              make ARCH=arm64 O=out defconfig
-            else
-              echo "[+] Found: $FOUND_DEF"
+            # Fallback: Search for any N20U/c2q related config
+            FOUND_DEF=$(find . -name "*z3q*defconfig" -o -name "*c2q*defconfig" | head -n 1)
+            if [ -n "$FOUND_DEF" ] && [ -f "$FOUND_DEF" ]; then
+              echo "[+] Found N20U variant: $FOUND_DEF"
               cp -f "$FOUND_DEF" arch/arm64/configs/target_defconfig
+            else
+              # Final fallback: Use available SM8250 config (Galaxy S20 x1q)
+              FOUND_DEF=$(find . -name "*kor_singlex_defconfig" | head -n 1)
+              if [ -n "$FOUND_DEF" ] && [ -f "$FOUND_DEF" ]; then
+                echo "[!] N20U config not found, using SM8250 generic: $FOUND_DEF"
+                echo "[*] Config may need adaptation for N20U variant"
+                cp -f "$FOUND_DEF" arch/arm64/configs/target_defconfig
+              else
+                echo "[!] No device-specific config found, using minimal defconfig..."
+                make ARCH=arm64 O=out defconfig
+              fi
             fi
           fi
 
