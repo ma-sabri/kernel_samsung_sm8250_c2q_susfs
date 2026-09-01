@@ -97,16 +97,14 @@ jobs:
           export CCACHE_DIR=~/.ccache
           ccache --max-size=2G
 
-          # xwenx90 kernel already includes KernelSU-Next
-          if [ -d "drivers/kernelsu" ]; then
-            echo "[+] KernelSU driver already present (xwenx90 included)"
-            ls -la drivers/kernelsu/ 2>/dev/null | head -10 || echo "  (directory exists but may not be accessible)"
-          else
-            echo "[*] KernelSU driver directory missing, cloning KernelSU-Next..."
-            mkdir -p drivers
-            git clone --depth=1 https://github.com/rifsxd/KernelSU-Next.git drivers/kernelsu 2>&1 | tail -5
-            ls -la drivers/kernelsu/ | head -10
-          fi
+          # xwenx90 kernel may have broken/corrupt kernelsu entry
+          # Clean up any existing (broken) kernelsu directory/symlink
+          rm -rf drivers/kernelsu 2>/dev/null || true
+
+          echo "[*] Cloning KernelSU-Next into drivers/kernelsu..."
+          mkdir -p drivers
+          git clone --depth=1 https://github.com/rifsxd/KernelSU-Next.git drivers/kernelsu 2>&1 | tail -3
+          ls -la drivers/kernelsu/ 2>/dev/null | head -5 || echo "  (clone may have issues)"
 
           # Verify Kconfig exists
           if [ ! -f "drivers/kernelsu/Kconfig" ]; then
