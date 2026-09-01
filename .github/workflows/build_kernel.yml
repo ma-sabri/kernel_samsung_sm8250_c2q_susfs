@@ -83,9 +83,9 @@ jobs:
       - name: Clone Kernel Source Tree & Fix KernelSU-Next Submodule
         run: |
           echo "========================================================="
-          echo "[3/7] Cloning LineageOS SM8250 kernel & adding KernelSU-Next..."
+          echo "[3/7] Cloning PostKevone C2Q kernel & adding KernelSU-Next..."
           echo "========================================================="
-          git clone --depth=1 --single-branch https://github.com/LineageOS/android_kernel_samsung_sm8250.git kernel
+          git clone --depth=1 --single-branch https://github.com/postkevone/c2q-kernelsu-next.git kernel
           cd kernel
           export CCACHE_DIR=~/.ccache
           ccache --max-size=2G
@@ -104,11 +104,28 @@ jobs:
             ln -s ../KernelSU-Next/kernel drivers/kernelsu 2>/dev/null || cp -rf KernelSU-Next/kernel drivers/kernelsu
           fi
 
+      - name: Fix Inline Function Definitions
+        working-directory: kernel
+        run: |
+          echo "========================================================="
+          echo "[4/7] Patching PostKevone inline function issues..."
+          echo "========================================================="
+          # Convert extern inline to static inline to fix GCC inlining errors
+          find include/linux -name "*.h" -exec sed -i 's/extern inline/static inline/g' {} \;
+
+          # Remove always_inline from functions without bodies
+          sed -i 's/__always_inline/inline/g' include/linux/mm.h 2>/dev/null || true
+          sed -i 's/__always_inline/inline/g' include/linux/sched.h 2>/dev/null || true
+          sed -i 's/__always_inline/inline/g' include/linux/atomic.h 2>/dev/null || true
+
+          # Add -Wno-error=inline to suppress remaining errors
+          echo "[+] Patched inline function definitions"
+
       - name: Apply SuSFS 4.19 Hooks & Driver Syntax Fixes
         working-directory: kernel
         run: |
           echo "========================================================="
-          echo "[4/7] Applying SuSFS 4.19 hooks & driver patches..."
+          echo "[5/7] Applying SuSFS 4.19 hooks & driver patches..."
           echo "========================================================="
           # 1. Fetch official SuSFS kernel-4.19 branch
           git clone --depth=1 -b kernel-4.19 https://gitlab.com/simonpunk/susfs4ksu.git susfs
@@ -140,7 +157,7 @@ jobs:
         working-directory: kernel
         run: |
           echo "========================================================="
-          echo "[5/7] Configuring vendor/z3q_kor_singlex_defconfig..."
+          echo "[6/7] Configuring vendor/z3q_kor_singlex_defconfig..."
           echo "========================================================="
           mkdir -p out arch/arm64/configs
 
@@ -192,7 +209,7 @@ jobs:
         working-directory: kernel
         run: |
           echo "========================================================="
-          echo "[6/7] Compiling SM8250 Linux Kernel Image..."
+          echo "[7/7] Compiling SM8250 Linux Kernel Image..."
           echo "========================================================="
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
@@ -201,7 +218,7 @@ jobs:
           export CC="ccache aarch64-linux-gnu-gcc"
           export HOSTCC="ccache gcc"
 
-          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat"
+          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat -Wno-error=inline"
 
           make -j$(nproc --all) ARCH=arm64 O=out \
             CC=aarch64-linux-gnu-gcc \
@@ -223,7 +240,7 @@ jobs:
         working-directory: kernel
         run: |
           echo "========================================================="
-          echo "[7/7] Verifying output and auditing SuSFS symbols..."
+          echo "[8/8] Verifying output and auditing SuSFS symbols..."
           echo "========================================================="
           IMAGE_PATH="out/arch/arm64/boot/Image"
           if [ -f "$IMAGE_PATH" ] && [ -s "$IMAGE_PATH" ]; then
