@@ -216,7 +216,7 @@ jobs:
           export HOSTCXX=clang++
           export HOSTCFLAGS="-fcommon"
 
-          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat -fno-builtin"
+          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat -fno-builtin -fno-integrated-as"
 
           make -j$(nproc --all) ARCH=arm64 O=out \
             CC=clang \
@@ -226,6 +226,7 @@ jobs:
             OBJCOPY=llvm-objcopy \
             OBJDUMP=llvm-objdump \
             STRIP=llvm-strip \
+            AS=aarch64-linux-gnu-as \
             CLANG_TRIPLE=aarch64-linux-gnu- \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
