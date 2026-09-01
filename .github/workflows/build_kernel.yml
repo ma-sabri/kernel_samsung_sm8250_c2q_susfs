@@ -68,26 +68,10 @@ jobs:
           echo "========================================================="
           echo "[2/7] Fetching Android AOSP prebuilt compiler..."
           echo "========================================================="
-          mkdir -p "$GITHUB_WORKSPACE/clang-toolchain"
-          cd "$GITHUB_WORKSPACE/clang-toolchain"
 
-          # Clone from official AOSP repository with git protocol
-          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/clang-r383902 . 2>/dev/null || \
-          { echo "WARNING: AOSP clone failed, attempting fallback..."; }
-
-          # Verify clang binary exists, otherwise try alternative sources
-          if [ ! -f "bin/clang" ] && [ ! -f "bin/clang-11.0.2" ]; then
-            echo "Clang not found in AOSP location, trying alternative download..."
-            cd "$GITHUB_WORKSPACE"
-            rm -rf clang-toolchain
-
-            # Try downloading from a pre-built archive if available
-            git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang-toolchain 2>/dev/null && \
-            echo "[+] Using Proton Clang as fallback" || \
-            { echo "[-] All toolchain sources exhausted"; exit 1; }
-          fi
-
-          echo "$GITHUB_WORKSPACE/clang-toolchain/bin" >> $GITHUB_PATH
+          # Use system clang/llvm from Ubuntu repositories (already installed)
+          # This has proper ARM cross-compilation support out of the box
+          which clang && which llvm-ar && which ld.lld && echo "[+] System Clang/LLVM found and ready to use"
 
       - name: Clone Kernel Source Tree & Fix KernelSU-Next Submodule
         run: |
@@ -216,7 +200,7 @@ jobs:
           export HOSTCXX=clang++
           export HOSTCFLAGS="-fcommon"
 
-          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat -fno-builtin -fno-integrated-as"
+          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat -fno-builtin"
 
           make -j$(nproc --all) ARCH=arm64 O=out \
             CC=clang \
@@ -226,7 +210,6 @@ jobs:
             OBJCOPY=llvm-objcopy \
             OBJDUMP=llvm-objdump \
             STRIP=llvm-strip \
-            AS=aarch64-linux-gnu-as \
             CLANG_TRIPLE=aarch64-linux-gnu- \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
