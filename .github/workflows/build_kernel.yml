@@ -163,6 +163,7 @@ jobs:
 
           # Append KernelSU-Next and SuSFS configuration symbols
           cat << 'EOF' >> arch/arm64/configs/target_defconfig
+          CONFIG_COMPAT=y
           CONFIG_KSU=y
           CONFIG_KSU_SUSFS=y
           CONFIG_SUSFS=y
