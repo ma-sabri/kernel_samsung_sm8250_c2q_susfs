@@ -11,10 +11,10 @@ jobs:
         with:
           submodules: false
 
-      - name: Install System Dependencies
+      - name: Install Critical Linux Compilation Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison flex libssl-dev libelf-dev lld llvm ccache build-essential libncurses5-dev
+          sudo apt-get install -y bc bison flex libssl-dev libelf-dev lld llvm ccache build-essential libncurses5-dev python3 git
 
       - name: Execute Shell Build Pipeline
         run: bash build_kernel.sh
