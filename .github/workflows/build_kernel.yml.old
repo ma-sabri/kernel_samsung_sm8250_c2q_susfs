@@ -1,0 +1,6 @@
+          sudo apt-get install -y --no-install-recommends \
+            git cpio tar xz-utils bc bison flex libssl-dev make \
+            gcc g++ gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi libelf-dev \
+            libncurses5-dev zip libfl-dev lld llvm liblz4-tool \
+            python3 python3-setuptools python3-dev
