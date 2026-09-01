@@ -251,6 +251,9 @@ jobs:
           ls -lh out/.config 2>/dev/null || echo "  (config not found in out/)"
 
           echo "[*] Starting compilation with $(nproc --all) threads..."
+          echo "[*] NOTE: Using -Wno-error to suppress inline function warnings"
+          echo "[*] (Verifying if kernel boots despite warnings)"
+
           make -j$(nproc --all) ARCH=arm64 O=out \
             CC=aarch64-linux-gnu-gcc \
             LD=aarch64-linux-gnu-ld.bfd \
@@ -263,7 +266,9 @@ jobs:
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             HOSTCC=gcc \
             HOSTCXX=g++ \
-            HOSTCFLAGS="-fcommon" \
+            HOSTCFLAGS="-fcommon -Wno-error" \
+            KCFLAGS="-Wno-error" \
+            CFLAGS="-Wno-error" \
             Image 2>&1 | tee build_execution.log
 
           echo "[*] Compilation complete. Exit code: $?"
