@@ -20,7 +20,7 @@ permissions:
 jobs:
   build-kernel:
     name: Build kernel (arm64, c2q)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       ARCH: arm64
       CROSS_COMPILE: aarch64-linux-gnu-
@@ -65,7 +65,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential bc bison flex libssl-dev ccache rsync \
-            libncurses-dev libelf-dev dwarves cpio python3 python3-distutils \
+            libncurses-dev libelf-dev dwarves cpio python3 python3-setuptools python3-dev\
             gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu wget
           ccache --max-size=1G || true
 
