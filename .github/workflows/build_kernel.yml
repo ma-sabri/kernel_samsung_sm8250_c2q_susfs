@@ -68,21 +68,9 @@ jobs:
           echo "========================================================="
           echo "[2/7] Fetching Android AOSP prebuilt compiler..."
           echo "========================================================="
-            
-            # The runner will create the workspace directory:
-            mkdir -p "$GITHUB_WORKSPACE/clang-toolchain"
-            # Fetch the specific archive using standard web protocols:
-            wget https://googlesource.com
-            # Extract directly into your workspace:
-            tar -xzf clang-r383902.tar.gz -C "$GITHUB_WORKSPACE/clang-toolchain"
-
-
-
-
-
-#          git clone --depth=1 --single-branch -b master \
-#            https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/clang-r383902 \
-#            "$GITHUB_WORKSPACE/clang-toolchain"
+          git clone --depth=1 --single-branch -b master \
+            https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/clang-r383902 \
+            "$GITHUB_WORKSPACE/clang-toolchain"
           echo "$GITHUB_WORKSPACE/clang-toolchain/bin" >> $GITHUB_PATH
 
       - name: Clone Kernel Source Tree & Fix KernelSU-Next Submodule
