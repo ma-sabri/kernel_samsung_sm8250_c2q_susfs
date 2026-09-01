@@ -71,13 +71,21 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/clang-toolchain"
           cd "$GITHUB_WORKSPACE/clang-toolchain"
 
-          # Download prebuilt clang r383902 from AOSP mirrors
-          wget -q https://github.com/LineageOS/android_prebuilts_clang_host_linux-x86_clang-r383902/archive/refs/heads/lineage-19.1.tar.gz -O clang.tar.gz 2>/dev/null || \
-          wget -q https://github.com/crdroidandroid/android_prebuilts_clang_host_linux-x86/archive/refs/heads/13.0.tar.gz -O clang.tar.gz 2>/dev/null || \
-          { echo "Failed to download toolchain"; exit 1; }
+          # Clone from official AOSP repository with git protocol
+          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/clang-r383902 . 2>/dev/null || \
+          { echo "WARNING: AOSP clone failed, attempting fallback..."; }
 
-          tar -xzf clang.tar.gz --strip-components=1
-          rm clang.tar.gz
+          # Verify clang binary exists, otherwise try alternative sources
+          if [ ! -f "bin/clang" ] && [ ! -f "bin/clang-11.0.2" ]; then
+            echo "Clang not found in AOSP location, trying alternative download..."
+            cd "$GITHUB_WORKSPACE"
+            rm -rf clang-toolchain
+
+            # Try downloading from a pre-built archive if available
+            git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang-toolchain 2>/dev/null && \
+            echo "[+] Using Proton Clang as fallback" || \
+            { echo "[-] All toolchain sources exhausted"; exit 1; }
+          fi
 
           echo "$GITHUB_WORKSPACE/clang-toolchain/bin" >> $GITHUB_PATH
 
