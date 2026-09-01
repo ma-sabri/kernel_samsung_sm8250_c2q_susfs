@@ -1,9 +1,9 @@
-      - name: Checkout Kernel Source
+    name: Checkout Kernel Source
         uses: actions/checkout@v4
         with:
           submodules: false # Prevents the Exit 128 submodule crash on GitHub side
 
-      - name: Setup KernelSU-Next
+    name: Setup KernelSU-Next
         run: |
           # 1. Strip the un-synchronized directory layout reference completely
           rm -rf KernelSU-Next
@@ -11,7 +11,7 @@
           # 2. Inject fresh, official source files right into your root compilation tree
           git clone --depth=1 https://github.com KernelSU-Next
 
-      - name: Configure and Build Kernel
+    name: Configure and Build Kernel
         run: |
           export ARCH=arm64
           export SUBARCH=arm64
