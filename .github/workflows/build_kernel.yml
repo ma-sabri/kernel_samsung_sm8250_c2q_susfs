@@ -110,16 +110,18 @@ jobs:
           echo "========================================================="
           echo "[4/7] Patching PostKevone inline function issues..."
           echo "========================================================="
-          # Convert extern inline to static inline to fix GCC inlining errors
-          find include/linux -name "*.h" -exec sed -i 's/extern inline/static inline/g' {} \;
+          # Aggressive: Remove all __always_inline and always_inline attributes
+          find include/linux arch/arm64 -name "*.h" -exec sed -i 's/__always_inline\s*/inline /g' {} \;
+          find include/linux arch/arm64 -name "*.h" -exec sed -i 's/\balways_inline\b/inline/g' {} \;
 
-          # Remove always_inline from functions without bodies
+          # Convert extern inline to static inline
+          find include/linux arch/arm64 -name "*.h" -exec sed -i 's/extern\s\+inline/static inline/g' {} \;
+
+          # Target specific problematic files
           sed -i 's/__always_inline/inline/g' include/linux/mm.h 2>/dev/null || true
           sed -i 's/__always_inline/inline/g' include/linux/sched.h 2>/dev/null || true
-          sed -i 's/__always_inline/inline/g' include/linux/atomic.h 2>/dev/null || true
 
-          # Add -Wno-error=inline to suppress remaining errors
-          echo "[+] Patched inline function definitions"
+          echo "[+] Removed all __always_inline attributes"
 
       - name: Apply SuSFS 4.19 Hooks & Driver Syntax Fixes
         working-directory: kernel
