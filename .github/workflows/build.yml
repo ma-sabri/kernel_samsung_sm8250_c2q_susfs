@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
 
 jobs:
   build:
@@ -12,14 +12,12 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4.2.0
         with:
-          submodules: true
-          fetch-depth: 1
+          submodules: false
 
-      - name: Install System Engine & Cross-Compiler Multiarch Dependencies
+      - name: Install Verified AOSP Kernel Compilation Toolchains
         run: |
-          sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y bc bison flex libssl-dev libelf-dev lld llvm ccache build-essential libncurses5-dev python3 git rsync libc6:i386 libncurses5:i386 libstdc++6:i386 lib32z1
+          sudo apt-get install -y bc bison flex libssl-dev libelf-dev lld llvm ccache build-essential libncurses-dev python3 git rsync liblz4-tool
 
       - name: Execute Verified Submodule Build Engine
         run: bash build_kernel.sh

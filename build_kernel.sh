@@ -1,31 +1,32 @@
 #!/bin/bash
 set -e
 
-echo "=== [1/4] Setting Up Submodule Environments ==="
-# Correct tracking maps for local compilation dependencies
-if [ -d "KernelSU-Next" ]; then
-    echo "Submodule space detected. Syncing references cleanly..."
-    git submodule update --init --recursive --force || echo "Bypassing minor sync deviations safely."
-fi
+echo "=== [1/4] Overriding Ghost Submodule Directories ==="
+# Prevent old gitindex mappings from locking the folder hierarchy
+rm -rf KernelSU-Next toolchain out
+rm -f .gitmodules
 
-echo "=== [2/4] Deploying Production Cross-Compiler ==="
-rm -rf toolchain out
+echo "=== [2/4] Deploying Clean KernelSU-Next Submodule ==="
+mkdir -p KernelSU-Next
+curl -LSs https://github.com | tar -xz -C KernelSU-Next --strip-components=1
+
+echo "=== [3/4] Pulling Standalone Proton-Clang Environment ==="
 git clone --depth=1 https://github.com toolchain
 
-echo "=== [3/4] Exporting Multiarch Execution Parameters ==="
+echo "=== [4/4] Activating Cross-Compiler Environment Variables ==="
 export ARCH=arm64
 export SUBARCH=arm64
 export PATH="$(pwd)/toolchain/bin:$PATH"
 
-# Establish target explicit compiler links
+# Map precise compiler execution variables
 export CC=clang
 export CROSS_COMPILE=aarch64-linux-gnu-
 export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-# Resolve structural defconfig looping bugs completely
+# Resolve the Kbuild configuration recursive make loop error
 cp arch/arm64/configs/vendor/z3q_kor_singlex_defconfig arch/arm64/configs/samsung_ci_defconfig
 
-echo "=== [4/4] Commencing Kbuild Engine Core Assembly ==="
+echo "=== [5/5] Commencing Production Kernel Assembly Pipeline ==="
 mkdir -p out
 make O=out ARCH=arm64 samsung_ci_defconfig
 make O=out ARCH=arm64 -j$(nproc --all)
