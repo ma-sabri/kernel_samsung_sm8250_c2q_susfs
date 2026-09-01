@@ -157,9 +157,15 @@ jobs:
             echo "[+] Located: $TARGET_DEF"
             cp -f "$TARGET_DEF" arch/arm64/configs/target_defconfig
           else
-            echo "[!] Target path not found directly, locating across tree..."
-            FOUND_DEF=$(find arch/arm64/configs/ -name "z3q_kor_singlex_defconfig" | head -n 1)
-            cp -f "$FOUND_DEF" arch/arm64/configs/target_defconfig
+            echo "[!] Target path not found, searching tree..."
+            FOUND_DEF=$(find . -name "z3q_kor_singlex_defconfig" -o -name "*kor*defconfig" | head -n 1)
+            if [ -z "$FOUND_DEF" ] || [ ! -f "$FOUND_DEF" ]; then
+              echo "[!] Defconfig not found, using minimal defconfig..."
+              make ARCH=arm64 O=out defconfig
+            else
+              echo "[+] Found: $FOUND_DEF"
+              cp -f "$FOUND_DEF" arch/arm64/configs/target_defconfig
+            fi
           fi
 
           # Append KernelSU-Next and SuSFS configuration symbols
