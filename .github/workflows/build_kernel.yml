@@ -130,10 +130,11 @@ jobs:
       - name: Fix Missing Kernel Definitions
         working-directory: kernel
         run: |
-          echo "Fixing missing function definitions in kernel source..."
-          # Convert extern inline to static inline for need_memory_boosting
-          sed -i 's/extern inline bool need_memory_boosting/static inline bool need_memory_boosting/g' include/linux/mm.h
-          echo "[+] Fixed need_memory_boosting definition"
+          echo "Patching kernel source to remove problematic always_inline attribute..."
+          # Remove always_inline attribute that causes inlining failures
+          sed -i 's/__always_inline//g' include/linux/mm.h
+          sed -i 's/extern inline/static inline/g' include/linux/mm.h
+          echo "[+] Patched kernel source files"
 
       - name: Process Defconfig & SuSFS Kconfig Non-Interactively
         working-directory: kernel
