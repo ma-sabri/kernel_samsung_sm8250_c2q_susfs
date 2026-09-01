@@ -127,6 +127,14 @@ jobs:
             sed -i 's/static debug_display_read_once(/static int debug_display_read_once(/g' techpack/display/msm/samsung/ss_dsi_panel_debug.c
           fi
 
+      - name: Fix Missing Kernel Definitions
+        working-directory: kernel
+        run: |
+          echo "Fixing missing function definitions in kernel source..."
+          # Convert extern inline to static inline for need_memory_boosting
+          sed -i 's/extern inline bool need_memory_boosting/static inline bool need_memory_boosting/g' include/linux/mm.h
+          echo "[+] Fixed need_memory_boosting definition"
+
       - name: Process Defconfig & SuSFS Kconfig Non-Interactively
         working-directory: kernel
         run: |
