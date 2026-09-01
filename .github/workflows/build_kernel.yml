@@ -83,46 +83,19 @@ jobs:
       - name: Clone Kernel Source Tree & Fix KernelSU-Next Submodule
         run: |
           echo "========================================================="
-          echo "[3/7] Cloning PostKevone C2Q kernel & adding KernelSU-Next..."
+          echo "[3/8] Cloning xwenx90 SM8250 KernelSU-Next kernel (Galaxy S20)..."
           echo "========================================================="
-          git clone --depth=1 --single-branch https://github.com/postkevone/c2q-kernelsu-next.git kernel
+          echo "[*] Proven SM8250 base with KernelSU-Next + SuSFS integration"
+          git clone --depth=1 --single-branch -b x1q https://github.com/xwenx90/GalaxyS20_Series_KernelSU_Next_Susfs.git kernel
           cd kernel
           export CCACHE_DIR=~/.ccache
           ccache --max-size=2G
-
-          # De-register corrupt git submodule reference
-          git submodule deinit -f . 2>/dev/null || true
-          rm -rf .git/modules/* KernelSU-Next drivers/kernelsu 2>/dev/null || true
-
-          # Clone official KernelSU-Next directly into KernelSU-Next directory
-          echo "[*] Cloning official KernelSU-Next repository..."
-          git clone --depth=1 https://github.com/rifsxd/KernelSU-Next.git KernelSU-Next
-
-          # Ensure drivers/kernelsu symlink / directory is populated if driver links there
-          if [ -d "drivers/kernelsu" ] || [ -L "drivers/kernelsu" ]; then
-            rm -rf drivers/kernelsu
-            ln -s ../KernelSU-Next/kernel drivers/kernelsu 2>/dev/null || cp -rf KernelSU-Next/kernel drivers/kernelsu
-          fi
-
-      - name: Fix Inline Function Definitions
-        working-directory: kernel
-        run: |
-          echo "========================================================="
-          echo "[4/7] Patching PostKevone inline function issues..."
-          echo "========================================================="
-          # Surgical: Only replace __always_inline (with underscores), not other macros
-          find include/linux arch/arm64 -name "*.h" -print0 | xargs -0 sed -i 's/__always_inline/inline/g'
-
-          # Convert extern inline to static inline (carefully)
-          find include/linux arch/arm64 -name "*.h" -print0 | xargs -0 sed -i 's/^extern inline/static inline/g'
-
-          echo "[+] Replaced __always_inline with inline"
 
       - name: Apply SuSFS 4.19 Hooks & Driver Syntax Fixes
         working-directory: kernel
         run: |
           echo "========================================================="
-          echo "[5/7] Applying SuSFS 4.19 hooks & driver patches..."
+          echo "[4/8] Applying SuSFS 4.19 hooks & verifying integration..."
           echo "========================================================="
           # 1. Fetch official SuSFS kernel-4.19 branch
           git clone --depth=1 -b kernel-4.19 https://gitlab.com/simonpunk/susfs4ksu.git susfs
@@ -154,7 +127,7 @@ jobs:
         working-directory: kernel
         run: |
           echo "========================================================="
-          echo "[6/7] Configuring vendor/z3q_kor_singlex_defconfig..."
+          echo "[5/8] Configuring vendor/z3q_kor_singlex_defconfig (N20U TGY)..."
           echo "========================================================="
           mkdir -p out arch/arm64/configs
 
@@ -206,7 +179,7 @@ jobs:
         working-directory: kernel
         run: |
           echo "========================================================="
-          echo "[7/7] Compiling SM8250 Linux Kernel Image..."
+          echo "[6/8] Compiling SM8250 Linux Kernel Image (xwenx90 base)..."
           echo "========================================================="
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
@@ -214,10 +187,6 @@ jobs:
           export CCACHE_DIR=~/.ccache
           export CC="ccache aarch64-linux-gnu-gcc"
           export HOSTCC="ccache gcc"
-
-          # Suppress all error→warning conversions and inline-specific errors
-          KFLAGS="-w -fno-builtin-stpcpy -fno-builtin-strcat"
-          CCFLAGS="-Wno-error -Wno-error=inline -Wno-always-inline"
 
           make -j$(nproc --all) ARCH=arm64 O=out \
             CC=aarch64-linux-gnu-gcc \
@@ -231,16 +200,14 @@ jobs:
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             HOSTCC=gcc \
             HOSTCXX=g++ \
-            HOSTCFLAGS="-fcommon -Wno-error" \
-            KCFLAGS="$KFLAGS $CCFLAGS" \
-            CFLAGS="$CCFLAGS" \
+            HOSTCFLAGS="-fcommon" \
             Image 2>&1 | tee build_execution.log
 
       - name: Verify Binary & Export Production Artifacts
         working-directory: kernel
         run: |
           echo "========================================================="
-          echo "[8/8] Verifying output and auditing SuSFS symbols..."
+          echo "[7/8] Verifying output and auditing SuSFS symbols..."
           echo "========================================================="
           IMAGE_PATH="out/arch/arm64/boot/Image"
           if [ -f "$IMAGE_PATH" ] && [ -s "$IMAGE_PATH" ]; then
